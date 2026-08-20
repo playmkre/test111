@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!-- sanghyeon_babo v1.1 / 2026-08-20 -->
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상현이 바보</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board:#2f4238;
+    --board-deep:#233229;
+    --chalk:#f4f3ec;
+    --chalk-dim:rgba(244,243,236,.55);
+    --chalk-pink:#f2b8c6;
+    --frame:#6b4a2f;
+    --frame-light:#8a6340;
+    --note:#fdf6df;
+    --note-line:#cfd8e8;
+    --ink:#2b3a55;
+    --ink-red:#d94f4f;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+
+  body{
+    font-family:'Gaegu','Nanum Pen Script',system-ui,sans-serif;
+    background:var(--frame);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:clamp(12px,3vw,40px);
+    overflow:hidden;
+  }
+
+  /* ===== 나무 액자 ===== */
+  .frame{
+    width:min(1000px,100%);
+    height:min(640px,100%);
+    padding:clamp(10px,1.8vw,22px);
+    border-radius:10px;
+    background:repeating-linear-gradient(96deg,
+      var(--frame) 0 7px, var(--frame-light) 7px 9px, var(--frame) 9px 18px);
+    box-shadow:0 30px 60px rgba(0,0,0,.45),
+      inset 0 2px 0 rgba(255,255,255,.18),
+      inset 0 -3px 0 rgba(0,0,0,.3);
+  }
+
+  /* ===== 칠판 ===== */
+  .board{
+    position:relative;
+    width:100%; height:100%;
+    border-radius:4px;
+    background:radial-gradient(120% 90% at 30% 20%, #3a5044 0%, var(--board) 45%, var(--board-deep) 100%);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.55);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    overflow:hidden;
+    cursor:pointer;
+  }
+  .board::before{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(102deg, rgba(255,255,255,.035) 0 40px, transparent 40px 95px),
+      repeating-linear-gradient(78deg, rgba(255,255,255,.025) 0 60px, transparent 60px 130px);
+    mix-blend-mode:screen; pointer-events:none;
+  }
+
+  .stack{
+    position:relative; z-index:1;
+    text-align:center;
+    transform:rotate(-2.2deg);
+    animation:pop .5s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  .eyebrow{
+    font-size:clamp(15px,2.4vw,22px);
+    letter-spacing:.32em;
+    color:var(--chalk-dim);
+    margin-bottom:clamp(6px,1.4vh,14px);
+    animation:chalk .5s ease-out .15s both;
+  }
+  h1{
+    font-weight:700;
+    font-size:clamp(56px,15vw,168px);
+    line-height:1;
+    color:var(--chalk);
+    letter-spacing:.02em;
+    text-shadow:0 0 1px rgba(244,243,236,.9),0 0 12px rgba(244,243,236,.35),2px 3px 0 rgba(0,0,0,.18);
+    animation:chalk .55s ease-out .3s both;
+  }
+  .underline{ display:block; width:min(560px,78vw); height:26px; margin:clamp(4px,1.2vh,12px) auto 0; overflow:visible; }
+  .underline path{
+    fill:none; stroke:var(--chalk-pink); stroke-width:5; stroke-linecap:round;
+    stroke-dasharray:600; stroke-dashoffset:600;
+    filter:drop-shadow(0 0 6px rgba(242,184,198,.4));
+    animation:draw .45s ease-out forwards;
+  }
+  .underline path:nth-child(1){ animation-delay:.75s; }
+  .underline path:nth-child(2){ animation-delay:.95s; }
+
+  .hint{
+    position:absolute; bottom:clamp(26px,4.5vh,42px);
+    z-index:1;
+    font-size:clamp(15px,2.1vw,21px);
+    color:var(--chalk-dim);
+    animation:chalk .5s ease-out 1.25s both, blink 2.4s ease-in-out 2s infinite;
+  }
+  .tray{ position:absolute; left:0; right:0; bottom:0; height:12px;
+    background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.05)); z-index:2; }
+  .tray::after{ content:""; position:absolute; left:clamp(20px,8vw,90px); bottom:5px;
+    width:54px; height:9px; border-radius:5px; background:var(--chalk);
+    box-shadow:0 0 10px rgba(244,243,236,.35); }
+
+  /* ===== 모달 ===== */
+  .backdrop{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(12,18,15,.62);
+    backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    opacity:0; visibility:hidden;
+    transition:opacity .22s ease, visibility .22s;
+  }
+  .backdrop.open{ opacity:1; visibility:visible; }
+
+  /* 접힌 쪽지 컨셉 */
+  .note{
+    position:relative;
+    width:min(420px,100%);
+    padding:clamp(28px,5vw,40px) clamp(24px,5vw,36px) clamp(22px,4vw,30px);
+    background:
+      repeating-linear-gradient(180deg, transparent 0 33px, var(--note-line) 33px 34px),
+      var(--note);
+    border-radius:3px;
+    color:var(--ink);
+    text-align:center;
+    transform:rotate(-1.5deg) scale(.9);
+    opacity:0;
+    transition:transform .3s cubic-bezier(.2,1.4,.4,1), opacity .25s ease;
+    box-shadow:0 24px 50px rgba(0,0,0,.5), 0 2px 0 rgba(0,0,0,.1);
+    cursor:default;
+  }
+  .backdrop.open .note{ transform:rotate(-1.5deg) scale(1); opacity:1; }
+
+  /* 접힌 자국 */
+  .note::before{
+    content:""; position:absolute; left:0; right:0; top:50%;
+    height:1px; background:rgba(0,0,0,.09);
+    box-shadow:0 -1px 0 rgba(255,255,255,.7);
+    pointer-events:none;
+  }
+  /* 모서리 접힘 */
+  .note::after{
+    content:""; position:absolute; right:0; bottom:0;
+    border-width:0 0 26px 26px; border-style:solid;
+    border-color:transparent transparent rgba(0,0,0,.08) transparent;
+  }
+
+  .note-tag{
+    font-size:clamp(14px,3.4vw,17px);
+    letter-spacing:.28em;
+    color:var(--ink-red);
+    margin-bottom:10px;
+  }
+  .note-msg{
+    font-weight:700;
+    font-size:clamp(38px,10vw,54px);
+    line-height:1.15;
+    margin-bottom:6px;
+  }
+  .note-sub{
+    font-size:clamp(16px,4vw,20px);
+    color:rgba(43,58,85,.62);
+    margin-bottom:clamp(18px,4vw,26px);
+  }
+  .note-close{
+    font-family:inherit;
+    font-size:clamp(18px,4.4vw,22px);
+    font-weight:700;
+    padding:9px 30px;
+    color:var(--note);
+    background:var(--ink);
+    border:none; border-radius:999px;
+    cursor:pointer;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .note-close:hover{ background:var(--ink-red); transform:translateY(-2px); }
+  .note-close:focus-visible{ outline:3px solid var(--ink-red); outline-offset:3px; }
+
+  /* ===== 애니메이션 ===== */
+  @keyframes pop{ from{ transform:rotate(-2.2deg) scale(.94); opacity:0; } to{ transform:rotate(-2.2deg) scale(1); opacity:1; } }
+  @keyframes chalk{ from{ opacity:0; filter:blur(6px); } to{ opacity:1; filter:blur(0); } }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  @keyframes blink{ 0%,100%{ opacity:.4; } 50%{ opacity:.95; } }
+
+  @media (prefers-reduced-motion:reduce){
+    .stack,.eyebrow,h1,.hint{ animation:none; opacity:1; filter:none; }
+    .underline path{ animation:none; stroke-dashoffset:0; }
+    .note{ transition:none; }
+  }
+  @media (max-width:520px){
+    .frame{ height:min(520px,100%); }
+    .eyebrow{ letter-spacing:.2em; }
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="board" id="board" role="button" tabindex="0" aria-haspopup="dialog" aria-label="칠판을 눌러 쪽지 열기">
+      <div class="stack">
+        <p class="eyebrow">긴급 공지</p>
+        <h1>상현이 바보</h1>
+        <svg class="underline" viewBox="0 0 560 26" aria-hidden="true">
+          <path d="M8 9 C 140 2, 300 18, 552 6" />
+          <path d="M14 19 C 160 13, 320 26, 546 16" />
+        </svg>
+      </div>
+      <p class="hint">아무 데나 눌러보세요</p>
+      <div class="tray"></div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop" role="dialog" aria-modal="true" aria-labelledby="noteMsg">
+    <div class="note" id="note">
+      <p class="note-tag">쪽 지</p>
+      <p class="note-msg" id="noteMsg">상현이 바보</p>
+      <p class="note-sub" id="noteSub">— 익명 —</p>
+      <button class="note-close" id="closeBtn" type="button">알겠어요</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var board    = document.getElementById('board');
+  var backdrop = document.getElementById('backdrop');
+  var note     = document.getElementById('note');
+  var closeBtn = document.getElementById('closeBtn');
+  var noteSub  = document.getElementById('noteSub');
+
+  var subs = ['— 익명 —','반박 시 니 말이 맞음','전교생 동의함','이미 다 알고 있음','2절까지 있음'];
+  var i = 0;
+  var lastFocus = null;
+
+  function open(){
+    noteSub.textContent = subs[i % subs.length];
+    i++;
+    lastFocus = document.activeElement;
+    backdrop.classList.add('open');
+    closeBtn.focus();
+  }
+  function close(){
+    backdrop.classList.remove('open');
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  board.addEventListener('click', open);
+  board.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+  });
+
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', function(e){
+    if (e.target === backdrop) close();
+  });
+  note.addEventListener('click', function(e){ e.stopPropagation(); });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && backdrop.classList.contains('open')) close();
+  });
+})();
+</script>
+</body>
+</html>
